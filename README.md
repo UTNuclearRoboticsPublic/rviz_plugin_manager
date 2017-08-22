@@ -1,0 +1,1 @@
+# RViz plugin manager

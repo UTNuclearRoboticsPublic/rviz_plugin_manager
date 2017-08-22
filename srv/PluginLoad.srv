@@ -1,0 +1,9 @@
+string plugin_class
+string plugin_name
+string plugin_topic
+string plugin_datatype
+
+---
+
+# returns plugin unique identifier or -1 on error
+int64 plugin_uid

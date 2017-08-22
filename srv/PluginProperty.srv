@@ -1,0 +1,12 @@
+string plugin_uid
+
+# XML config string of a plugin
+string config
+
+---
+
+# return code
+#		0: Success
+#		1: Failure
+#	       -1: Undefined
+int64 code

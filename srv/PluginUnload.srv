@@ -1,0 +1,9 @@
+int64 plugin_uid
+
+---
+
+# return code
+#  0: Success
+#  1: Failure
+# -1: Undefined
+int64 code

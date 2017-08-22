@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<launch>
+	<node name="rviz" args="-d $(find rviz_plugin_manager)/rviz_cfg/rviz_plugin_manager.rviz" pkg="rviz" type="rviz" output="screen"/>
+</launch>
