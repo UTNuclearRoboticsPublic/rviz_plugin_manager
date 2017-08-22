@@ -1,9 +1,9 @@
 <library path="lib/librviz_plugin_manager">
   <class type="rviz_plugin_manager::PluginManager"
 	  base_class_type="rviz::Display"
-	  name="Plugin manager plugin xoxo">
+	  name="Plugin manager">
     <description>
-		Load RViz plugins through service calls
+		This plugin enables loading, unloading, and configuring RViz plugins through service calls
     </description>
   </class>
 </library>

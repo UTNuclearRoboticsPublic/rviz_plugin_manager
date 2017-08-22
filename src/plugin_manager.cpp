@@ -2,11 +2,15 @@
 #include <std_msgs/String.h>
 #include <rviz/display_context.h>
 #include <rviz/display_group.h>
+#include <rviz/yaml_config_reader.h>
+#include <rviz/yaml_config_writer.h>
+#include <rviz/config.h>
 #include <map>
 #include "rviz_plugin_manager/plugin_manager.h"
 #include "rviz_plugin_manager/PluginLoad.h"
 #include "rviz_plugin_manager/PluginUnload.h"
-#include "rviz_plugin_manager/PluginProperty.h"
+#include "rviz_plugin_manager/PluginGetConfig.h"
+#include "rviz_plugin_manager/PluginSetConfig.h"
 
 using namespace rviz_plugin_manager;
 
@@ -28,7 +32,8 @@ void PluginManager::onEnable()
 	{
 		service_load_ = nh_.advertiseService("rviz_plugin_load", &PluginManager::pluginLoadCallback, this);
 		service_unload_ = nh_.advertiseService("rviz_plugin_unload", &PluginManager::pluginUnloadCallback, this);
-		service_property_ = nh_.advertiseService("rviz_plugin_set_property", &PluginManager::pluginPropertyCallback, this);
+		service_get_config_ = nh_.advertiseService("rviz_plugin_get_config", &PluginManager::pluginGetConfigCallback, this);
+		service_set_config_ = nh_.advertiseService("rviz_plugin_set_config", &PluginManager::pluginSetConfigCallback, this);
 		ROS_INFO("PluginManager is now advertising services");
 	}
 	catch (ros::Exception& e)
@@ -42,7 +47,8 @@ void PluginManager::onDisable()
 	ROS_INFO("Shutting down PluginManager services");
 	service_load_.shutdown();
 	service_unload_.shutdown();
-	service_property_.shutdown();
+	service_get_config_.shutdown();
+	service_set_config_.shutdown();
 	display_map_.clear();
 }
 
@@ -89,8 +95,55 @@ bool PluginManager::pluginUnloadCallback(PluginUnload::Request &req, PluginUnloa
 }
 
 
-bool PluginManager::pluginPropertyCallback(PluginProperty::Request &req, PluginProperty::Response &res)
+bool PluginManager::pluginGetConfigCallback(PluginGetConfig::Request &req, PluginGetConfig::Response &res)
 {
+	std::map<long, Display*>::iterator disp_it = display_map_.find(req.plugin_uid);
+	if(disp_it == display_map_.end())
+	{
+		ROS_ERROR("Unable to get config. Plugin with id: %ld was not found", req.plugin_uid); 
+		res.code = -1;
+	}
+	else
+	{
+		Display* disp = disp_it->second;
+		rviz::Config config;
+		disp->save(config);
+		//for( rviz::Config::MapIterator iter = config.mapIterator(); iter.isValid(); iter.advance()  ) {
+		//	QString key = iter.currentKey();
+		//	rviz::Config child = iter.currentChild();
+		//	printf( "key %s has value %s.\n", qPrintable( key  ), qPrintable( child.getValue().toString()  ) );
+		//}
+		
+		// We have to use the writeString() function since writeConfigNode() [that we actually need]
+		// is declared private in rviz/yaml_config_writer.h
+		rviz::YamlConfigWriter writer;
+		QString filename = "";
+		res.config = writer.writeString(config, filename).toStdString();
+		res.code = 0;
+	}
+	return true;
+}
+
+
+bool PluginManager::pluginSetConfigCallback(PluginSetConfig::Request &req, PluginSetConfig::Response &res)
+{
+	std::map<long, Display*>::iterator disp_it = display_map_.find(req.plugin_uid);
+	if(disp_it == display_map_.end())
+	{
+		ROS_ERROR("Unable to set config. Plugin with id: %ld was not found", req.plugin_uid); 
+		res.code = -1;
+	}
+	else
+	{
+		rviz::Config config;
+		rviz::YamlConfigReader reader;
+		reader.readString(config, req.config.c_str(), ""); // try to parse the config str into rviz config map 
+		ROS_INFO("Got display configuration: \n%s", req.config.c_str());
+
+		Display* disp = disp_it->second;
+		disp->load(config); // save config to display
+		res.code = 0;
+	}
 	return true;
 }
 

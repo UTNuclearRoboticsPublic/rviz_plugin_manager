@@ -15,7 +15,8 @@ add_service_files(
 	FILES
 	PluginLoad.srv
 	PluginUnload.srv
-	PluginProperty.srv
+	PluginGetConfig.srv
+	PluginSetConfig.srv
 	)
 
 generate_messages(
