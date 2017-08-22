@@ -47,9 +47,9 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: true
-    - Class: Plugin manager plugin xoxo
+    - Class: Plugin manager
       Enabled: true
-      Name: Plugin manager plugin xoxo
+      Name: Plugin manager
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48

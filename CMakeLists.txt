@@ -1,14 +1,9 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(rviz_plugin_manager)
 
-## Add support for C++11, supported in ROS Kinetic and newer
-# add_definitions(-std=c++11)
-
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS roscpp std_msgs rviz pluginlib message_generation)
 
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
 include_directories(include)
 
 add_service_files(
@@ -25,7 +20,6 @@ generate_messages(
 	)
 
 link_directories(${catkin_LIBRARY_DIRS})
-
 
 ## This plugin includes Qt widgets, so we must include Qt.
 ## We'll use the version that rviz used so they are compatible.
@@ -48,6 +42,7 @@ add_definitions(-DQT_NO_KEYWORDS)
 catkin_package()
 include_directories(include ${catkin_INCLUDE_DIRS})
 
+# Build Qt MOC files
 if(rviz_QT_VERSION VERSION_LESS "5")
 qt4_wrap_cpp(MOC_FILES
 	include/${PROJECT_NAME}/plugin_manager.h
@@ -64,9 +59,9 @@ target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${QT_LIBRARIES} )
 
 add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 
-install(TARGETS ${PROJECT_NAME}  
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+#install(TARGETS ${PROJECT_NAME}  
+#  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
 
 
 #install(FILES

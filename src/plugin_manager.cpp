@@ -16,18 +16,18 @@ using namespace rviz_plugin_manager;
 
 PluginManager::PluginManager() : plugin_uid_(0)
 {
-	ROS_INFO("PluginManager created.");
+//	ROS_INFO("PluginManager created.");
 }
 
 PluginManager::~PluginManager()
 {
-	ROS_INFO("PluginManager destroyed.");
+//	ROS_INFO("PluginManager destroyed.");
 }
 
 
 void PluginManager::onEnable()
 {
-	ROS_INFO("PluginManager enabled");
+//	ROS_INFO("PluginManager enabled");
 	try
 	{
 		service_load_ = nh_.advertiseService("rviz_plugin_load", &PluginManager::pluginLoadCallback, this);
@@ -38,13 +38,13 @@ void PluginManager::onEnable()
 	}
 	catch (ros::Exception& e)
 	{
-		ROS_ERROR("Couldn't advertise service: %s", e.what());
+		ROS_ERROR("PluginManager couldn't advertise service: %s", e.what());
 	}
 }
 
 void PluginManager::onDisable()
 {
-	ROS_INFO("Shutting down PluginManager services");
+	ROS_INFO("PluginManager is shutting down it's services");
 	service_load_.shutdown();
 	service_unload_.shutdown();
 	service_get_config_.shutdown();
@@ -56,7 +56,7 @@ void PluginManager::onDisable()
 bool PluginManager::pluginLoadCallback(PluginLoad::Request &req, PluginLoad::Response &res)
 {
 	
-	ROS_INFO("Got request for loading plugin: \n\tplugin_name: %s\n\ttopic: %s\n\tplugin_uid: %ld", 
+	ROS_INFO("PluginManager is loading plugin: \n\tplugin_name: %s\n\ttopic: %s\n\tplugin_uid: %ld", 
 			req.plugin_name.c_str(), req.plugin_topic.c_str(), plugin_uid_);
 
 	rviz::DisplayGroup* disp_group= context_->getRootDisplayGroup();
@@ -75,13 +75,12 @@ bool PluginManager::pluginLoadCallback(PluginLoad::Request &req, PluginLoad::Res
 bool PluginManager::pluginUnloadCallback(PluginUnload::Request &req, PluginUnload::Response &res)
 {
 	
-	ROS_INFO("Got request for unloading plugin: \n\tplugin_uid: %ld", 
-			req.plugin_uid);
+	ROS_INFO("PluginManager is unloading plugin with UID: %ld", req.plugin_uid);
 
 	std::map<long, Display*>::iterator disp_it = display_map_.find(req.plugin_uid);
 	if(disp_it == display_map_.end())
 	{
-		ROS_ERROR("Plugin with id: %ld was not found (already removed?)", req.plugin_uid); 
+		ROS_ERROR("PluginManager didn't find plugin with UID: %ld", req.plugin_uid); 
 		res.code = -1;
 	}
 	else
@@ -100,7 +99,7 @@ bool PluginManager::pluginGetConfigCallback(PluginGetConfig::Request &req, Plugi
 	std::map<long, Display*>::iterator disp_it = display_map_.find(req.plugin_uid);
 	if(disp_it == display_map_.end())
 	{
-		ROS_ERROR("Unable to get config. Plugin with id: %ld was not found", req.plugin_uid); 
+		ROS_ERROR("PluginManager didn't find plugin with UID: %ld", req.plugin_uid); 
 		res.code = -1;
 	}
 	else
@@ -138,7 +137,8 @@ bool PluginManager::pluginSetConfigCallback(PluginSetConfig::Request &req, Plugi
 		rviz::Config config;
 		rviz::YamlConfigReader reader;
 		reader.readString(config, req.config.c_str(), ""); // try to parse the config str into rviz config map 
-		ROS_INFO("Got display configuration: \n%s", req.config.c_str());
+//		ROS_INFO("Got display configuration: \n%s", req.config.c_str());
+		ROS_INFO("Loading new configuration for display with UID: %ld", req.plugin_uid);
 
 		Display* disp = disp_it->second;
 		disp->load(config); // save config to display
