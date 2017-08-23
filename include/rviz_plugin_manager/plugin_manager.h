@@ -31,6 +31,8 @@ namespace rviz_plugin_manager
 			bool pluginSetConfigCallback(PluginSetConfig::Request &req, PluginSetConfig::Response &res);
 
 		private:
+			bool getDistplayByUid(rviz::Display* &disp, long plugin_uid);
+
 			std::map<long,rviz::Display*> display_map_;
 			ros::NodeHandle nh_;
 			ros::ServiceServer service_load_;
