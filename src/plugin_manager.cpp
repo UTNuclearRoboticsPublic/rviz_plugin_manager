@@ -6,6 +6,7 @@
 #include <rviz/yaml_config_writer.h>
 #include <rviz/config.h>
 #include <map>
+#include <sstream>
 #include "rviz_plugin_manager/plugin_manager.h"
 #include "rviz_plugin_manager/PluginLoad.h"
 #include "rviz_plugin_manager/PluginUnload.h"
@@ -59,7 +60,7 @@ bool PluginManager::pluginLoadCallback(PluginLoad::Request &req, PluginLoad::Res
 	ROS_INFO("PluginManager is loading plugin: \n\tplugin_name: %s\n\ttopic: %s\n\tplugin_uid: %ld", 
 			req.plugin_name.c_str(), req.plugin_topic.c_str(), plugin_uid_);
 
-	rviz::DisplayGroup* disp_group= context_->getRootDisplayGroup();
+	rviz::DisplayGroup* disp_group = context_->getRootDisplayGroup();
 	Display* disp = disp_group->createDisplay(req.plugin_class.c_str());
 	disp->initialize(context_);
 	disp->setName(req.plugin_name.c_str());
@@ -68,6 +69,7 @@ bool PluginManager::pluginLoadCallback(PluginLoad::Request &req, PluginLoad::Res
 	disp_group->addDisplay(disp);
 	display_map_[plugin_uid_] = disp; // add to map
 	res.plugin_uid = plugin_uid_++; // return id and increase for next plugin
+	res.code = 0; //TODO
 	return true;
 }
 
@@ -80,15 +82,43 @@ bool PluginManager::pluginUnloadCallback(PluginUnload::Request &req, PluginUnloa
 	std::map<long, Display*>::iterator disp_it = display_map_.find(req.plugin_uid);
 	if(disp_it == display_map_.end())
 	{
-		ROS_ERROR("PluginManager didn't find plugin with UID: %ld", req.plugin_uid); 
+		std::stringstream ss;
+		ss <<"PluginManager didn't find plugin with UID: " << req.plugin_uid;
 		res.code = -1;
+		res.message = ss.str();
+		ROS_ERROR_STREAM(ss); 
 	}
 	else
 	{
-		Display* disp = disp_it->second;
-		disp->disconnect();
-		disp->deleteLater();
-		res.code = 0;
+		
+		// check if this display still exists in rviz
+		rviz::DisplayGroup* disp_group = context_->getRootDisplayGroup();
+		bool disp_exists = false;
+		for(int i=0;i<disp_group->numDisplays();i++)
+		{
+			if(disp_group->getDisplayAt(i) == disp_it->second)
+			{
+				disp_exists = true;
+				break;
+			}
+
+		}
+
+
+		if(disp_exists)
+		{
+			disp_it->second->disconnect();
+			disp_it->second->deleteLater();
+			res.code = 0;
+			std::stringstream ss;
+			ss <<"PluginManager unloaded plugin with UID: " << req.plugin_uid;
+			res.message = ss.str();
+		}
+		else{
+			ROS_INFO("Disp already removed");
+			display_map_.erase(disp_it); // remove not valid pointer
+
+		}
 	}
 	return true;
 }

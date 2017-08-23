@@ -2,10 +2,12 @@ int64 plugin_uid
 
 ---
 
-# return code
-#		0: Success
-#		1: Failure
-#	       -1: Undefined
-int64 code
 # YAML config string of a display plugin
 string config
+
+# return call status
+#   0: success 
+#  -1: error
+int16 code     
+string message
+
