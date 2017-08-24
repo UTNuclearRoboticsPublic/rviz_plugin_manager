@@ -2,11 +2,13 @@
 #include <std_msgs/String.h>
 #include <rviz/display_context.h>
 #include <rviz/display_group.h>
+#include <rviz/failed_display.h>
 #include <rviz/yaml_config_reader.h>
 #include <rviz/yaml_config_writer.h>
 #include <rviz/config.h>
 #include <map>
 #include <sstream>
+#include <typeinfo>
 #include "rviz_plugin_manager/plugin_manager.h"
 #include "rviz_plugin_manager/PluginLoad.h"
 #include "rviz_plugin_manager/PluginUnload.h"
@@ -54,89 +56,113 @@ void PluginManager::onDisable()
 }
 
 
+bool PluginManager::getDistplayByUid(rviz::Display* &disp, long plugin_uid)
+{
+	disp = NULL;
+
+	// search for uid from our display map
+	std::map<long, Display*>::iterator disp_it = display_map_.find(plugin_uid);
+	if(disp_it == display_map_.end())
+	{
+		return false;
+	}
+
+
+	// found display from out map, now let's verify that the display exists in rviz display group
+	rviz::DisplayGroup* disp_group = context_->getRootDisplayGroup();
+	for(int i=0;i<disp_group->numDisplays();i++)
+	{
+		if(disp_group->getDisplayAt(i) == disp_it->second)
+		{
+			//all good
+			disp = disp_it->second;
+			return true;
+		}
+
+	}
+	
+	// someone has removed the display from rviz, remove from our map as well.
+	display_map_.erase(disp_it);
+	return false;
+}
+
+
 bool PluginManager::pluginLoadCallback(PluginLoad::Request &req, PluginLoad::Response &res)
 {
-	
-	ROS_INFO("PluginManager is loading plugin: \n\tplugin_name: %s\n\ttopic: %s\n\tplugin_uid: %ld", 
-			req.plugin_name.c_str(), req.plugin_topic.c_str(), plugin_uid_);
+
 
 	rviz::DisplayGroup* disp_group = context_->getRootDisplayGroup();
 	Display* disp = disp_group->createDisplay(req.plugin_class.c_str());
-	disp->initialize(context_);
-	disp->setName(req.plugin_name.c_str());
-	disp->setTopic(req.plugin_topic.c_str(), req.plugin_datatype.c_str());
-	disp->setEnabled(true);
-	disp_group->addDisplay(disp);
-	display_map_[plugin_uid_] = disp; // add to map
-	res.plugin_uid = plugin_uid_++; // return id and increase for next plugin
-	res.code = 0; //TODO
+
+	try
+	{
+		if(dynamic_cast<rviz::FailedDisplay*>(disp) != NULL)
+		{
+			// RViz created Failed Display, it means that the plugin was not loaded.
+			// Remove Failed Display and notify
+			disp->disconnect();
+			disp->deleteLater();
+			res.plugin_uid = -1;
+			res.code = -1;
+			std::stringstream ss;
+			ss << "PluginManager failed to load plugin for class '" << req.plugin_class << "'.";
+			res.message = ss.str();
+			ROS_ERROR_STREAM(res.message); 
+		}
+		else
+		{
+			disp->initialize(context_);
+			disp->setName(req.plugin_name.c_str());
+			disp->setTopic(req.plugin_topic.c_str(), req.plugin_datatype.c_str());
+			disp->setEnabled(true);
+			disp_group->addDisplay(disp);
+			display_map_[plugin_uid_] = disp; // add to map
+			res.plugin_uid = plugin_uid_++; // return id and increase for next plugin
+			res.code = 0;
+		}
+	}
+	catch (const std::bad_cast& e){
+		ROS_INFO("What a heck, PluginManager had bad cast exception: %s", e.what());
+	}
+	
 	return true;
 }
 
 
 bool PluginManager::pluginUnloadCallback(PluginUnload::Request &req, PluginUnload::Response &res)
 {
-	
-	ROS_INFO("PluginManager is unloading plugin with UID: %ld", req.plugin_uid);
-
-	std::map<long, Display*>::iterator disp_it = display_map_.find(req.plugin_uid);
-	if(disp_it == display_map_.end())
+	rviz::Display* disp;
+	if(getDistplayByUid(disp, req.plugin_uid))
+	{
+		disp->disconnect();
+		disp->deleteLater();
+		res.code = 0;
+		std::stringstream ss;
+		ss << "PluginManager unloaded plugin with UID: " << req.plugin_uid;
+		res.message = ss.str();
+		ROS_ERROR_STREAM(res.message.c_str()); 
+	}
+	else
 	{
 		std::stringstream ss;
-		ss <<"PluginManager didn't find plugin with UID: " << req.plugin_uid;
+		ss << "PluginManager didn't find plugin with UID: " << req.plugin_uid;
 		res.code = -1;
 		res.message = ss.str();
 		ROS_ERROR_STREAM(ss); 
 	}
-	else
-	{
-		
-		// check if this display still exists in rviz
-		rviz::DisplayGroup* disp_group = context_->getRootDisplayGroup();
-		bool disp_exists = false;
-		for(int i=0;i<disp_group->numDisplays();i++)
-		{
-			if(disp_group->getDisplayAt(i) == disp_it->second)
-			{
-				disp_exists = true;
-				break;
-			}
 
-		}
-
-
-		if(disp_exists)
-		{
-			disp_it->second->disconnect();
-			disp_it->second->deleteLater();
-			res.code = 0;
-			std::stringstream ss;
-			ss <<"PluginManager unloaded plugin with UID: " << req.plugin_uid;
-			res.message = ss.str();
-		}
-		else{
-			ROS_INFO("Disp already removed");
-			display_map_.erase(disp_it); // remove not valid pointer
-
-		}
-	}
 	return true;
 }
 
 
 bool PluginManager::pluginGetConfigCallback(PluginGetConfig::Request &req, PluginGetConfig::Response &res)
 {
-	std::map<long, Display*>::iterator disp_it = display_map_.find(req.plugin_uid);
-	if(disp_it == display_map_.end())
+	rviz::Display* disp;
+	if(getDistplayByUid(disp, req.plugin_uid))
 	{
-		ROS_ERROR("PluginManager didn't find plugin with UID: %ld", req.plugin_uid); 
-		res.code = -1;
-	}
-	else
-	{
-		Display* disp = disp_it->second;
 		rviz::Config config;
 		disp->save(config);
+
 		//for( rviz::Config::MapIterator iter = config.mapIterator(); iter.isValid(); iter.advance()  ) {
 		//	QString key = iter.currentKey();
 		//	rviz::Config child = iter.currentChild();
@@ -145,34 +171,56 @@ bool PluginManager::pluginGetConfigCallback(PluginGetConfig::Request &req, Plugi
 		
 		// We have to use the writeString() function since writeConfigNode() [that we actually need]
 		// is declared private in rviz/yaml_config_writer.h
+	
 		rviz::YamlConfigWriter writer;
 		QString filename = "";
 		res.config = writer.writeString(config, filename).toStdString();
+		
+		std::stringstream ss;
+		ss << "PluginManager successfully returned configuration for plugin with UID:" << req.plugin_uid;
 		res.code = 0;
+		res.message = ss.str();
+		ROS_INFO_STREAM(res.message); 
 	}
+	else
+	{
+		std::stringstream ss;
+		ss << "PluginManager didn't find plugin with UID:" << req.plugin_uid;
+		res.code = -1;
+		res.message = ss.str();
+		ROS_ERROR_STREAM(res.message); 
+	}
+
 	return true;
 }
 
 
 bool PluginManager::pluginSetConfigCallback(PluginSetConfig::Request &req, PluginSetConfig::Response &res)
 {
-	std::map<long, Display*>::iterator disp_it = display_map_.find(req.plugin_uid);
-	if(disp_it == display_map_.end())
-	{
-		ROS_ERROR("Unable to set config. Plugin with id: %ld was not found", req.plugin_uid); 
-		res.code = -1;
-	}
-	else
+	rviz::Display* disp;
+	if(getDistplayByUid(disp, req.plugin_uid))
 	{
 		rviz::Config config;
 		rviz::YamlConfigReader reader;
 		reader.readString(config, req.config.c_str(), ""); // try to parse the config str into rviz config map 
-//		ROS_INFO("Got display configuration: \n%s", req.config.c_str());
-		ROS_INFO("Loading new configuration for display with UID: %ld", req.plugin_uid);
-
-		Display* disp = disp_it->second;
 		disp->load(config); // save config to display
+
+		std::stringstream ss;
+		ss << "PluginManager loaded new configuration for display with UID: " << req.plugin_uid;
+		ROS_DEBUG("Got display configuration: \n%s", req.config.c_str());
+		ROS_INFO_STREAM(ss);
+
 		res.code = 0;
+		res.message = ss.str();
+		ROS_ERROR_STREAM(res.message); 
+	}
+	else
+	{
+		std::stringstream ss;
+		ss << "PluginManager didn't find plugin with UID:" << req.plugin_uid;
+		res.code = -1;
+		res.message = ss.str();
+		ROS_ERROR_STREAM(res.message); 
 	}
 	return true;
 }
