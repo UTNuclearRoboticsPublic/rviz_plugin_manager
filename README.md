@@ -17,6 +17,7 @@ Load the plugin in RViz by using the add button or specify it in the .rviz confi
 
 ```
 rosservice call /rviz_plugin_load "rviz/Marker" "My plugin name" "/marker_topic" ""
+rosservice call /rviz_plugin_load "rviz/Image" "My image" "/webcam/image" "std_msgs/Image"
 rosservice call /rviz_plugin_get_config 0
 rosservice call /rviz_plugin_set_config 0 \"'Enabled: true'\"
 rosservice call /rviz_plugin_unload 0

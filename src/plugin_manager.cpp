@@ -113,7 +113,7 @@ bool PluginManager::pluginLoadCallback(PluginLoad::Request &req, PluginLoad::Res
 		{
 			disp->initialize(context_);
 			disp->setName(req.plugin_name.c_str());
-			disp->setTopic(req.plugin_topic.c_str(), req.plugin_datatype.c_str());
+			disp->setTopic(req.plugin_topic.c_str(), req.plugin_data_type.c_str());
 			disp->setEnabled(true);
 			disp_group->addDisplay(disp);
 			display_map_[plugin_uid_] = disp; // add to map
