@@ -89,8 +89,6 @@ bool PluginManager::getDistplayByUid(rviz::Display* &disp, long plugin_uid)
 
 bool PluginManager::pluginLoadCallback(PluginLoad::Request &req, PluginLoad::Response &res)
 {
-
-
 	rviz::DisplayGroup* disp_group = context_->getRootDisplayGroup();
 	Display* disp = disp_group->createDisplay(req.plugin_class.c_str());
 
@@ -111,10 +109,20 @@ bool PluginManager::pluginLoadCallback(PluginLoad::Request &req, PluginLoad::Res
 		}
 		else
 		{
+      // if config was provided, parse it into rviz config map
+      if (req.plugin_config != "")
+      {
+        rviz::Config config;
+        rviz::YamlConfigReader reader;
+        reader.readString(config, req.plugin_config.c_str(), "");
+        disp->load(config);
+      }
+
 			disp->initialize(context_);
-			disp->setName(req.plugin_name.c_str());
-			disp->setTopic(req.plugin_topic.c_str(), req.plugin_data_type.c_str());
+      disp->setName(req.plugin_name.c_str());
+      disp->setTopic(req.plugin_topic.c_str(), req.plugin_data_type.c_str());
 			disp->setEnabled(true);
+
 			disp_group->addDisplay(disp);
 			display_map_[plugin_uid_] = disp; // add to map
 			res.plugin_uid = plugin_uid_++; // return id and increase for next plugin
@@ -140,7 +148,7 @@ bool PluginManager::pluginUnloadCallback(PluginUnload::Request &req, PluginUnloa
 		std::stringstream ss;
 		ss << "PluginManager unloaded plugin with UID: " << req.plugin_uid;
 		res.message = ss.str();
-		ROS_ERROR_STREAM(res.message.c_str()); 
+		ROS_INFO_STREAM(res.message.c_str()); 
 	}
 	else
 	{
@@ -212,7 +220,7 @@ bool PluginManager::pluginSetConfigCallback(PluginSetConfig::Request &req, Plugi
 
 		res.code = 0;
 		res.message = ss.str();
-		ROS_ERROR_STREAM(res.message); 
+		ROS_INFO_STREAM(res.message); 
 	}
 	else
 	{

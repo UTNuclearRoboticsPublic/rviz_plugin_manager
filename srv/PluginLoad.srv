@@ -2,6 +2,7 @@ string plugin_class
 string plugin_name
 string plugin_topic
 string plugin_data_type
+string plugin_config
 
 ---
 
