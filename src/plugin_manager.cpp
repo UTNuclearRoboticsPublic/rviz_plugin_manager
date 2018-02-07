@@ -1,36 +1,35 @@
 #include <ros/ros.h>
-#include <std_msgs/String.h>
 #include <rviz/display_context.h>
 #include <rviz/display_group.h>
 #include <rviz/failed_display.h>
 #include <rviz/yaml_config_reader.h>
 #include <rviz/yaml_config_writer.h>
 #include <rviz/config.h>
-#include <map>
-#include <sstream>
-#include <typeinfo>
+
 #include "rviz_plugin_manager/plugin_manager.h"
 #include "rviz_plugin_manager/PluginLoad.h"
 #include "rviz_plugin_manager/PluginUnload.h"
 #include "rviz_plugin_manager/PluginGetConfig.h"
 #include "rviz_plugin_manager/PluginSetConfig.h"
 
+#include <map>
+#include <sstream>
+#include <typeinfo>
+
 using namespace rviz_plugin_manager;
 
 PluginManager::PluginManager() : plugin_uid_(0)
 {
-//	ROS_INFO("PluginManager created.");
 }
 
 PluginManager::~PluginManager()
 {
-//	ROS_INFO("PluginManager destroyed.");
 }
 
 
 void PluginManager::onEnable()
 {
-//	ROS_INFO("PluginManager enabled");
+  // Advertise the services
 	try
 	{
 		service_load_ = nh_.advertiseService("rviz_plugin_load", &PluginManager::pluginLoadCallback, this);
@@ -47,6 +46,7 @@ void PluginManager::onEnable()
 
 void PluginManager::onDisable()
 {
+  // Shut down the services. 
 	ROS_INFO("PluginManager is shutting down it's services");
 	service_load_.shutdown();
 	service_unload_.shutdown();
@@ -60,7 +60,7 @@ bool PluginManager::getDistplayByUid(rviz::Display* &disp, long plugin_uid)
 {
 	disp = NULL;
 
-	// search for uid from our display map
+	// Search for uid from our display map.
 	std::map<long, Display*>::iterator disp_it = display_map_.find(plugin_uid);
 	if(disp_it == display_map_.end())
 	{
@@ -68,20 +68,20 @@ bool PluginManager::getDistplayByUid(rviz::Display* &disp, long plugin_uid)
 	}
 
 
-	// found display from out map, now let's verify that the display exists in rviz display group
+	// Found display from out map, now let's verify that the display exists in rviz display group.
 	rviz::DisplayGroup* disp_group = context_->getRootDisplayGroup();
 	for(int i=0;i<disp_group->numDisplays();i++)
 	{
 		if(disp_group->getDisplayAt(i) == disp_it->second)
 		{
-			//all good
+			// Display exist, all good.
 			disp = disp_it->second;
 			return true;
 		}
 
 	}
 	
-	// someone has removed the display from rviz, remove from our map as well.
+	// Someone has removed the display from rviz, remove from our map as well.
 	display_map_.erase(disp_it);
 	return false;
 }
@@ -109,6 +109,8 @@ bool PluginManager::pluginLoadCallback(PluginLoad::Request &req, PluginLoad::Res
 		}
 		else
 		{
+
+			disp->initialize(context_);
       // if config was provided, parse it into rviz config map
       if (req.plugin_config != "")
       {
@@ -117,8 +119,6 @@ bool PluginManager::pluginLoadCallback(PluginLoad::Request &req, PluginLoad::Res
         reader.readString(config, req.plugin_config.c_str(), "");
         disp->load(config);
       }
-
-			disp->initialize(context_);
       disp->setName(req.plugin_name.c_str());
       disp->setTopic(req.plugin_topic.c_str(), req.plugin_data_type.c_str());
 			disp->setEnabled(true);
@@ -171,15 +171,8 @@ bool PluginManager::pluginGetConfigCallback(PluginGetConfig::Request &req, Plugi
 		rviz::Config config;
 		disp->save(config);
 
-		//for( rviz::Config::MapIterator iter = config.mapIterator(); iter.isValid(); iter.advance()  ) {
-		//	QString key = iter.currentKey();
-		//	rviz::Config child = iter.currentChild();
-		//	printf( "key %s has value %s.\n", qPrintable( key  ), qPrintable( child.getValue().toString()  ) );
-		//}
-		
 		// We have to use the writeString() function since writeConfigNode() [that we actually need]
-		// is declared private in rviz/yaml_config_writer.h
-	
+		// is declared private in 'rviz/yaml_config_writer.h'.
 		rviz::YamlConfigWriter writer;
 		QString filename = "";
 		res.config = writer.writeString(config, filename).toStdString();
