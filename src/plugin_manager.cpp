@@ -145,18 +145,14 @@ bool PluginManager::pluginUnloadCallback(PluginUnload::Request &req, PluginUnloa
 		disp->disconnect();
 		disp->deleteLater();
 		res.code = 0;
-		std::stringstream ss;
-		ss << "PluginManager unloaded plugin with UID: " << req.plugin_uid;
-		res.message = ss.str();
+		res.message = "PluginManager unloaded plugin with UID: " + std::to_string(req.plugin_uid);
 		ROS_INFO_STREAM(res.message.c_str()); 
 	}
 	else
 	{
-		std::stringstream ss;
-		ss << "PluginManager didn't find plugin with UID: " << req.plugin_uid;
 		res.code = -1;
-		res.message = ss.str();
-		ROS_ERROR_STREAM(ss); 
+		res.message = "PluginManager didn't find plugin with UID: " + std::to_string(req.plugin_uid);
+		ROS_ERROR_STREAM(res.message); 
 	}
 
 	return true;
@@ -177,18 +173,14 @@ bool PluginManager::pluginGetConfigCallback(PluginGetConfig::Request &req, Plugi
 		QString filename = "";
 		res.config = writer.writeString(config, filename).toStdString();
 		
-		std::stringstream ss;
-		ss << "PluginManager successfully returned configuration for plugin with UID:" << req.plugin_uid;
 		res.code = 0;
-		res.message = ss.str();
+		res.message = "PluginManager successfully returned configuration for plugin with UID:" + std::to_string(req.plugin_uid);
 		ROS_INFO_STREAM(res.message); 
 	}
 	else
 	{
-		std::stringstream ss;
-		ss << "PluginManager didn't find plugin with UID:" << req.plugin_uid;
 		res.code = -1;
-		res.message = ss.str();
+		res.message = "PluginManager didn't find plugin with UID:" + std::to_string(req.plugin_uid);
 		ROS_ERROR_STREAM(res.message); 
 	}
 
@@ -206,21 +198,16 @@ bool PluginManager::pluginSetConfigCallback(PluginSetConfig::Request &req, Plugi
 		reader.readString(config, req.config.c_str(), ""); // try to parse the config str into rviz config map 
 		disp->load(config); // save config to display
 
-		std::stringstream ss;
-		ss << "PluginManager loaded new configuration for display with UID: " << req.plugin_uid;
 		ROS_DEBUG("Got display configuration: \n%s", req.config.c_str());
-		ROS_INFO_STREAM(ss);
 
 		res.code = 0;
-		res.message = ss.str();
+		res.message = "PluginManager loaded new configuration for display with UID: " + std::to_string(req.plugin_uid);
 		ROS_INFO_STREAM(res.message); 
 	}
 	else
 	{
-		std::stringstream ss;
-		ss << "PluginManager didn't find plugin with UID:" << req.plugin_uid;
 		res.code = -1;
-		res.message = ss.str();
+		res.message = "PluginManager didn't find plugin with UID:" + std::to_string(req.plugin_uid);
 		ROS_ERROR_STREAM(res.message); 
 	}
 	return true;
